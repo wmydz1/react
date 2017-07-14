@@ -1,5 +1,5 @@
 /**
- * Copyright 2013-2015, Facebook, Inc.
+ * Copyright 2013-present, Facebook, Inc.
  * All rights reserved.
  *
  * This source code is licensed under the BSD-style license found in the
@@ -7,29 +7,36 @@
  * of patent rights can be found in the PATENTS file in the same directory.
  *
  * @providesModule CSSPropertyOperations
- * @typechecks static-only
  */
 
 'use strict';
 
 var CSSProperty = require('CSSProperty');
-var ExecutionEnvironment = require('ExecutionEnvironment');
+var ExecutionEnvironment = require('fbjs/lib/ExecutionEnvironment');
 
-var camelizeStyleName = require('camelizeStyleName');
+var camelizeStyleName = require('fbjs/lib/camelizeStyleName');
 var dangerousStyleValue = require('dangerousStyleValue');
-var hyphenateStyleName = require('hyphenateStyleName');
-var memoizeStringOnly = require('memoizeStringOnly');
-var warning = require('warning');
+var getComponentName = require('getComponentName');
+var hyphenateStyleName = require('fbjs/lib/hyphenateStyleName');
+var memoizeStringOnly = require('fbjs/lib/memoizeStringOnly');
+var warning = require('fbjs/lib/warning');
+
+if (__DEV__) {
+  var {getCurrentFiberOwnerName} = require('ReactDebugCurrentFiber');
+}
 
 var processStyleName = memoizeStringOnly(function(styleName) {
   return hyphenateStyleName(styleName);
 });
 
-var styleFloatAccessor = 'cssFloat';
+var hasShorthandPropertyBug = false;
 if (ExecutionEnvironment.canUseDOM) {
-  // IE8 only supports accessing cssFloat (standard) as styleFloat
-  if (document.documentElement.style.cssFloat === undefined) {
-    styleFloatAccessor = 'styleFloat';
+  var tempStyle = document.createElement('div').style;
+  try {
+    // IE8 throws "Invalid argument." if resetting shorthand style properties.
+    tempStyle.font = '';
+  } catch (e) {
+    hasShorthandPropertyBug = true;
   }
 }
 
@@ -42,8 +49,10 @@ if (__DEV__) {
 
   var warnedStyleNames = {};
   var warnedStyleValues = {};
+  var warnedForNaNValue = false;
+  var warnedForInfinityValue = false;
 
-  var warnHyphenatedStyleName = function(name) {
+  var warnHyphenatedStyleName = function(name, owner) {
     if (warnedStyleNames.hasOwnProperty(name) && warnedStyleNames[name]) {
       return;
     }
@@ -51,13 +60,14 @@ if (__DEV__) {
     warnedStyleNames[name] = true;
     warning(
       false,
-      'Unsupported style property %s. Did you mean %s?',
+      'Unsupported style property %s. Did you mean %s?%s',
       name,
-      camelizeStyleName(name)
+      camelizeStyleName(name),
+      checkRenderMessage(owner),
     );
   };
 
-  var warnBadVendoredStyleName = function(name) {
+  var warnBadVendoredStyleName = function(name, owner) {
     if (warnedStyleNames.hasOwnProperty(name) && warnedStyleNames[name]) {
       return;
     }
@@ -65,13 +75,14 @@ if (__DEV__) {
     warnedStyleNames[name] = true;
     warning(
       false,
-      'Unsupported vendor-prefixed style property %s. Did you mean %s?',
+      'Unsupported vendor-prefixed style property %s. Did you mean %s?%s',
       name,
-      name.charAt(0).toUpperCase() + name.slice(1)
+      name.charAt(0).toUpperCase() + name.slice(1),
+      checkRenderMessage(owner),
     );
   };
 
-  var warnStyleValueWithSemicolon = function(name, value) {
+  var warnStyleValueWithSemicolon = function(name, value, owner) {
     if (warnedStyleValues.hasOwnProperty(value) && warnedStyleValues[value]) {
       return;
     }
@@ -79,24 +90,83 @@ if (__DEV__) {
     warnedStyleValues[value] = true;
     warning(
       false,
-      'Style property values shouldn\'t contain a semicolon. ' +
-      'Try "%s: %s" instead.',
+      "Style property values shouldn't contain a semicolon.%s " +
+        'Try "%s: %s" instead.',
+      checkRenderMessage(owner),
       name,
-      value.replace(badStyleValueWithSemicolonPattern, '')
+      value.replace(badStyleValueWithSemicolonPattern, ''),
     );
+  };
+
+  var warnStyleValueIsNaN = function(name, value, owner) {
+    if (warnedForNaNValue) {
+      return;
+    }
+
+    warnedForNaNValue = true;
+    warning(
+      false,
+      '`NaN` is an invalid value for the `%s` css style property.%s',
+      name,
+      checkRenderMessage(owner),
+    );
+  };
+
+  var warnStyleValueIsInfinity = function(name, value, owner) {
+    if (warnedForInfinityValue) {
+      return;
+    }
+
+    warnedForInfinityValue = true;
+    warning(
+      false,
+      '`Infinity` is an invalid value for the `%s` css style property.%s',
+      name,
+      checkRenderMessage(owner),
+    );
+  };
+
+  var checkRenderMessage = function(owner) {
+    var ownerName;
+    if (owner != null) {
+      // Stack passes the owner manually all the way to CSSPropertyOperations.
+      ownerName = getComponentName(owner);
+    } else {
+      // Fiber doesn't pass it but uses ReactDebugCurrentFiber to track it.
+      // It is only enabled in development and tracks host components too.
+      ownerName = getCurrentFiberOwnerName();
+      // TODO: also report the stack.
+    }
+    if (ownerName) {
+      return '\n\nCheck the render method of `' + ownerName + '`.';
+    }
+    return '';
   };
 
   /**
    * @param {string} name
    * @param {*} value
+   * @param {ReactDOMComponent} component
    */
-  var warnValidStyle = function(name, value) {
+  var warnValidStyle = function(name, value, component) {
+    var owner;
+    if (component) {
+      owner = component._currentElement._owner;
+    }
     if (name.indexOf('-') > -1) {
-      warnHyphenatedStyleName(name);
+      warnHyphenatedStyleName(name, owner);
     } else if (badVendoredStyleNamePattern.test(name)) {
-      warnBadVendoredStyleName(name);
+      warnBadVendoredStyleName(name, owner);
     } else if (badStyleValueWithSemicolonPattern.test(value)) {
-      warnStyleValueWithSemicolon(name, value);
+      warnStyleValueWithSemicolon(name, value, owner);
+    }
+
+    if (typeof value === 'number') {
+      if (isNaN(value)) {
+        warnStyleValueIsNaN(name, value, owner);
+      } else if (!isFinite(value)) {
+        warnStyleValueIsInfinity(name, value, owner);
+      }
     }
   };
 }
@@ -105,7 +175,6 @@ if (__DEV__) {
  * Operations for dealing with CSS properties.
  */
 var CSSPropertyOperations = {
-
   /**
    * Serializes a mapping of style properties for use as inline styles:
    *
@@ -116,24 +185,69 @@ var CSSPropertyOperations = {
    * The result should be HTML-escaped before insertion into the DOM.
    *
    * @param {object} styles
+   * @param {ReactDOMComponent} component
    * @return {?string}
    */
-  createMarkupForStyles: function(styles) {
+  createMarkupForStyles: function(styles, component) {
     var serialized = '';
+    var delimiter = '';
     for (var styleName in styles) {
       if (!styles.hasOwnProperty(styleName)) {
         continue;
       }
+      var isCustomProperty = styleName.indexOf('--') === 0;
       var styleValue = styles[styleName];
       if (__DEV__) {
-        warnValidStyle(styleName, styleValue);
+        if (!isCustomProperty) {
+          warnValidStyle(styleName, styleValue, component);
+        }
       }
       if (styleValue != null) {
-        serialized += processStyleName(styleName) + ':';
-        serialized += dangerousStyleValue(styleName, styleValue) + ';';
+        serialized += delimiter + processStyleName(styleName) + ':';
+        serialized += dangerousStyleValue(
+          styleName,
+          styleValue,
+          isCustomProperty,
+        );
+
+        delimiter = ';';
       }
     }
     return serialized || null;
+  },
+
+  /**
+   * This creates a string that is expected to be equivalent to the style
+   * attribute generated by server-side rendering. It by-passes warnings and
+   * security checks so it's not safe to use this value for anything other than
+   * comparison. It is only used in DEV for SSR validation. This is duplicated
+   * from createMarkupForStyles because createMarkupForStyles is expected to
+   * move out of the client-side renderer and it would be nice to make a clean
+   * break.
+   */
+  createDangerousStringForStyles: function(styles) {
+    if (__DEV__) {
+      var serialized = '';
+      var delimiter = '';
+      for (var styleName in styles) {
+        if (!styles.hasOwnProperty(styleName)) {
+          continue;
+        }
+        var styleValue = styles[styleName];
+        if (styleValue != null) {
+          var isCustomProperty = styleName.indexOf('--') === 0;
+          serialized += delimiter + hyphenateStyleName(styleName) + ':';
+          serialized += dangerousStyleValue(
+            styleName,
+            styleValue,
+            isCustomProperty,
+          );
+
+          delimiter = ';';
+        }
+      }
+      return serialized || null;
+    }
   },
 
   /**
@@ -142,24 +256,36 @@ var CSSPropertyOperations = {
    *
    * @param {DOMElement} node
    * @param {object} styles
+   * @param {ReactDOMComponent} component
    */
-  setValueForStyles: function(node, styles) {
+  setValueForStyles: function(node, styles, component) {
     var style = node.style;
     for (var styleName in styles) {
       if (!styles.hasOwnProperty(styleName)) {
         continue;
       }
+      var isCustomProperty = styleName.indexOf('--') === 0;
       if (__DEV__) {
-        warnValidStyle(styleName, styles[styleName]);
+        if (!isCustomProperty) {
+          warnValidStyle(styleName, styles[styleName], component);
+        }
       }
-      var styleValue = dangerousStyleValue(styleName, styles[styleName]);
+      var styleValue = dangerousStyleValue(
+        styleName,
+        styles[styleName],
+        isCustomProperty,
+      );
       if (styleName === 'float') {
-        styleName = styleFloatAccessor;
+        styleName = 'cssFloat';
       }
-      if (styleValue) {
+      if (isCustomProperty) {
+        style.setProperty(styleName, styleValue);
+      } else if (styleValue) {
         style[styleName] = styleValue;
       } else {
-        var expansion = CSSProperty.shorthandPropertyExpansions[styleName];
+        var expansion =
+          hasShorthandPropertyBug &&
+          CSSProperty.shorthandPropertyExpansions[styleName];
         if (expansion) {
           // Shorthand property that IE8 won't like unsetting, so unset each
           // component to placate it
@@ -172,7 +298,6 @@ var CSSPropertyOperations = {
       }
     }
   },
-
 };
 
 module.exports = CSSPropertyOperations;

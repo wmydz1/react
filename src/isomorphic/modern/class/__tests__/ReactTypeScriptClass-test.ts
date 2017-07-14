@@ -1,5 +1,9 @@
+/// <reference path="../PropTypes.d.ts" />
+/// <reference path="../React.d.ts" />
+/// <reference path="../ReactDOM.d.ts" />
+
 /*!
- * Copyright 2015, Facebook, Inc.
+ * Copyright 2015-present, Facebook, Inc.
  * All rights reserved.
  *
  * This source code is licensed under the BSD-style license found in the
@@ -7,7 +11,9 @@
  * of patent rights can be found in the PATENTS file in the same directory.
  */
 
-import React = require('React');
+import React = require('react');
+import ReactDOM = require('react-dom');
+import PropTypes = require('prop-types');
 
 // Before Each
 
@@ -24,10 +30,10 @@ class Inner extends React.Component {
     renderedName = this.props.name;
     return React.createElement('div', { className: this.props.name });
   }
-};
+}
 
 function test(element, expectedTag, expectedClassName) {
-  var instance = React.render(element, container);
+  var instance = ReactDOM.render(element, container);
   expect(container.firstChild).not.toBeNull();
   expect(container.firstChild.tagName).toBe(expectedTag);
   expect(container.firstChild.className).toBe(expectedClassName);
@@ -44,7 +50,7 @@ function test(element, expectedTag, expectedClassName) {
 class Empty extends React.Component { }
 
 // it renders a simple stateless component with prop
-class SimpleStateless {
+class SimpleStateless extends React.Component {
   props : any;
   render() {
     return React.createElement(Inner, {name: this.props.bar});
@@ -81,13 +87,13 @@ class StateBasedOnProps extends React.Component {
 // it renders based on context in the constructor
 class StateBasedOnContext extends React.Component {
   static contextTypes = {
-    tag: React.PropTypes.string,
-    className: React.PropTypes.string
-  }
+    tag: PropTypes.string,
+    className: PropTypes.string
+  };
   state = {
     tag: this.context.tag,
     className: this.context.className
-  }
+  };
   render() {
     var Tag = this.state.tag;
     return React.createElement(Tag, {className: this.state.className});
@@ -96,9 +102,9 @@ class StateBasedOnContext extends React.Component {
 
 class ProvideChildContextTypes extends React.Component {
   static childContextTypes = {
-    tag: React.PropTypes.string,
-    className: React.PropTypes.string
-  }
+    tag: PropTypes.string,
+    className: PropTypes.string
+  };
   getChildContext() {
     return { tag: 'span', className: 'foo' };
   }
@@ -112,7 +118,7 @@ var renderCount = 0;
 class RenderOnce extends React.Component {
   state = {
     bar: this.props.initialValue
-  }
+  };
   componentWillMount() {
     this.setState({ bar: 'bar' });
   }
@@ -123,20 +129,20 @@ class RenderOnce extends React.Component {
 }
 
 // it should throw with non-object in the initial state property
-class ArrayState {
-  state = ['an array']
+class ArrayState extends React.Component {
+  state = ['an array'];
   render() {
     return React.createElement('span');
   }
 }
-class StringState {
-  state = 'a string'
+class StringState extends React.Component {
+  state = 'a string';
   render() {
     return React.createElement('span');
   }
 }
-class NumberState {
-  state = 1234
+class NumberState extends React.Component {
+  state = 1234;
   render() {
     return React.createElement('span');
   }
@@ -144,7 +150,7 @@ class NumberState {
 
 // it should render with null in the initial state property
 class NullState extends React.Component {
-  state = null
+  state = null;
   render() {
     return React.createElement('span');
   }
@@ -154,10 +160,10 @@ class NullState extends React.Component {
 class BoundEventHandler extends React.Component {
   state = {
     bar: this.props.initialValue
-  }
+  };
   handleClick = () => {
     this.setState({ bar: 'bar' });
-  }
+  };
   render() {
     return (
       React.createElement(Inner, {
@@ -172,7 +178,7 @@ class BoundEventHandler extends React.Component {
 class UnboundEventHandler extends React.Component {
   state = {
     bar: this.props.initialValue
-  }
+  };
   handleClick() {
     this.setState({ bar: 'bar' });
   }
@@ -185,7 +191,7 @@ class UnboundEventHandler extends React.Component {
 
 // it renders using forceUpdate even when there is no state
 class ForceUpdateWithNoState extends React.Component {
-  mutativeValue : string = this.props.initialValue
+  mutativeValue : string = this.props.initialValue;
   handleClick() {
     this.mutativeValue = 'bar';
     this.forceUpdate();
@@ -202,9 +208,9 @@ class ForceUpdateWithNoState extends React.Component {
 
 // it will call all the normal life cycle methods
 var lifeCycles = [];
-class NormalLifeCycles {
-  props : any
-  state = {}
+class NormalLifeCycles extends React.Component {
+  props : any;
+  state = {};
   componentWillMount() {
     lifeCycles.push('will-mount');
   }
@@ -253,7 +259,7 @@ class ClassicProperties extends React.Component {
 }
 
 // it should warn when misspelling shouldComponentUpdate
-class MisspelledComponent1 {
+class MisspelledComponent1 extends React.Component {
   componentShouldUpdate() {
     return false;
   }
@@ -263,7 +269,7 @@ class MisspelledComponent1 {
 }
 
 // it should warn when misspelling componentWillReceiveProps
-class MisspelledComponent2 {
+class MisspelledComponent2 extends React.Component {
   componentWillRecieveProps() {
     return false;
   }
@@ -274,13 +280,13 @@ class MisspelledComponent2 {
 
 // it supports this.context passed via getChildContext
 class ReadContext extends React.Component {
-  static contextTypes = { bar: React.PropTypes.string };
+  static contextTypes = { bar: PropTypes.string };
   render() {
     return React.createElement('div', { className: this.context.bar });
   }
 }
-class ProvideContext {
-  static childContextTypes = { bar: React.PropTypes.string };
+class ProvideContext extends React.Component {
+  static childContextTypes = { bar: PropTypes.string };
   getChildContext() {
     return { bar: 'bar-through-context' };
   }
@@ -290,7 +296,7 @@ class ProvideContext {
 }
 
 // it supports classic refs
-class ClassicRefs {
+class ClassicRefs extends React.Component {
   render() {
     return React.createElement(Inner, {name: 'foo', ref: 'inner'});
   }
@@ -311,7 +317,15 @@ describe('ReactTypeScriptClass', function() {
   });
 
   it('throws if no render function is defined', function() {
-    expect(() => React.render(React.createElement(Empty), container)).toThrow();
+    spyOn(console, 'error');
+
+    expect(() => ReactDOM.render(React.createElement(Empty), container)).toThrow();
+
+    expect((<any>console.error).calls.count()).toBe(1);
+    expect((<any>console.error).calls.argsFor(0)[0]).toBe(
+      'Warning: Empty(...): No `render` method found on the returned ' +
+      'component instance: you may have forgotten to define `render`.'
+    );
   });
 
   it('renders a simple stateless component with prop', function() {
@@ -349,19 +363,16 @@ describe('ReactTypeScriptClass', function() {
 
   it('should throw with non-object in the initial state property', function() {
     expect(() => test(React.createElement(ArrayState), 'span', ''))
-    .toThrow(
-      'Invariant Violation: ArrayState.state: ' +
-      'must be set to an object or null'
+    .toThrowError(
+      'ArrayState.state: must be set to an object or null'
     );
     expect(() => test(React.createElement(StringState), 'span', ''))
-    .toThrow(
-      'Invariant Violation: StringState.state: ' +
-      'must be set to an object or null'
+    .toThrowError(
+      'StringState.state: must be set to an object or null'
     );
     expect(() => test(React.createElement(NumberState), 'span', ''))
-    .toThrow(
-      'Invariant Violation: NumberState.state: ' +
-      'must be set to an object or null'
+    .toThrowError(
+      'NumberState.state: must be set to an object or null'
     );
   });
 
@@ -414,7 +425,7 @@ describe('ReactTypeScriptClass', function() {
       'did-update', { value: 'foo' }, {}
     ]);
     lifeCycles = []; // reset
-    React.unmountComponentAtNode(container);
+    ReactDOM.unmountComponentAtNode(container);
     expect(lifeCycles).toEqual([
       'will-unmount'
     ]);
@@ -422,38 +433,54 @@ describe('ReactTypeScriptClass', function() {
 
   it('warns when classic properties are defined on the instance, ' +
      'but does not invoke them.', function() {
-    var warn = jest.genMockFn();
-    console.error = warn;
+    spyOn(console, 'error');
     getInitialStateWasCalled = false;
     getDefaultPropsWasCalled = false;
     test(React.createElement(ClassicProperties), 'SPAN', 'foo');
     expect(getInitialStateWasCalled).toBe(false);
     expect(getDefaultPropsWasCalled).toBe(false);
-    expect(warn.mock.calls.length).toBe(4);
-    expect(warn.mock.calls[0][0]).toContain(
+    expect((<any>console.error).calls.count()).toBe(4);
+    expect((<any>console.error).calls.argsFor(0)[0]).toContain(
       'getInitialState was defined on ClassicProperties, ' +
       'a plain JavaScript class.'
     );
-    expect(warn.mock.calls[1][0]).toContain(
+    expect((<any>console.error).calls.argsFor(1)[0]).toContain(
       'getDefaultProps was defined on ClassicProperties, ' +
       'a plain JavaScript class.'
     );
-    expect(warn.mock.calls[2][0]).toContain(
+    expect((<any>console.error).calls.argsFor(2)[0]).toContain(
       'propTypes was defined as an instance property on ClassicProperties.'
     );
-    expect(warn.mock.calls[3][0]).toContain(
+    expect((<any>console.error).calls.argsFor(3)[0]).toContain(
       'contextTypes was defined as an instance property on ClassicProperties.'
     );
   });
 
+  it('does not warn about getInitialState() on class components ' +
+     'if state is also defined.', () => {
+    spyOn(console, 'error');
+
+    class Example extends React.Component {
+      state = {};
+      getInitialState() {
+        return {};
+      }
+      render() {
+        return React.createElement('span', {className: 'foo'});
+      }
+    }
+
+    test(React.createElement(Example), 'SPAN', 'foo');
+    expect((<any>console.error).calls.count()).toBe(0);
+  });
+
   it('should warn when misspelling shouldComponentUpdate', function() {
-    var warn = jest.genMockFn();
-    console.error = warn;
+    spyOn(console, 'error');
 
     test(React.createElement(MisspelledComponent1), 'SPAN', 'foo');
 
-    expect(warn.mock.calls.length).toBe(1);
-    expect(warn.mock.calls[0][0]).toBe(
+    expect((<any>console.error).calls.count()).toBe(1);
+    expect((<any>console.error).calls.argsFor(0)[0]).toBe(
       'Warning: ' +
       'MisspelledComponent1 has a method called componentShouldUpdate(). Did ' +
       'you mean shouldComponentUpdate()? The name is phrased as a question ' +
@@ -462,13 +489,12 @@ describe('ReactTypeScriptClass', function() {
   });
 
   it('should warn when misspelling componentWillReceiveProps', function() {
-    var warn = jest.genMockFn();
-    console.error = warn;
+    spyOn(console, 'error');
 
     test(React.createElement(MisspelledComponent2), 'SPAN', 'foo');
 
-    expect(warn.mock.calls.length).toBe(1);
-    expect(warn.mock.calls[0][0]).toBe(
+    expect((<any>console.error).calls.count()).toBe(1);
+    expect((<any>console.error).calls.argsFor(0)[0]).toBe(
       'Warning: ' +
       'MisspelledComponent2 has a method called componentWillRecieveProps(). ' +
       'Did you mean componentWillReceiveProps()?'
@@ -476,32 +502,19 @@ describe('ReactTypeScriptClass', function() {
   });
 
   it('should throw AND warn when trying to access classic APIs', function() {
-    var warn = jest.genMockFn();
-    console.error = warn;
+    spyOn(console, 'warn');
     var instance = test(
       React.createElement(Inner, {name: 'foo'}),
       'DIV','foo'
     );
-    expect(() => instance.getDOMNode()).toThrow();
     expect(() => instance.replaceState({})).toThrow();
     expect(() => instance.isMounted()).toThrow();
-    expect(() => instance.setProps({ name: 'bar' })).toThrow();
-    expect(() => instance.replaceProps({ name: 'bar' })).toThrow();
-    expect(warn.mock.calls.length).toBe(5);
-    expect(warn.mock.calls[0][0]).toContain(
-      'getDOMNode(...) is deprecated in plain JavaScript React classes'
-    );
-    expect(warn.mock.calls[1][0]).toContain(
+    expect((<any>console.warn).calls.count()).toBe(2);
+    expect((<any>console.warn).calls.argsFor(0)[0]).toContain(
       'replaceState(...) is deprecated in plain JavaScript React classes'
     );
-    expect(warn.mock.calls[2][0]).toContain(
+    expect((<any>console.warn).calls.argsFor(1)[0]).toContain(
       'isMounted(...) is deprecated in plain JavaScript React classes'
-    );
-    expect(warn.mock.calls[3][0]).toContain(
-      'setProps(...) is deprecated in plain JavaScript React classes'
-    );
-    expect(warn.mock.calls[4][0]).toContain(
-      'replaceProps(...) is deprecated in plain JavaScript React classes'
     );
   });
 
@@ -520,7 +533,7 @@ describe('ReactTypeScriptClass', function() {
       'DIV',
       'foo'
     );
-    var node = React.findDOMNode(instance);
+    var node = ReactDOM.findDOMNode(instance);
     expect(node).toBe(container.firstChild);
   });
 

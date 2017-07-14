@@ -1,5 +1,5 @@
 /**
- * Copyright 2013-2015, Facebook, Inc.
+ * Copyright 2013-present, Facebook, Inc.
  * All rights reserved.
  *
  * This source code is licensed under the BSD-style license found in the
@@ -7,11 +7,12 @@
  * of patent rights can be found in the PATENTS file in the same directory.
  *
  * @providesModule PooledClass
+ * @flow
  */
 
 'use strict';
 
-var invariant = require('invariant');
+var invariant = require('fbjs/lib/invariant');
 
 /**
  * Static poolers. Several custom versions for each potential number of
@@ -53,14 +54,14 @@ var threeArgumentPooler = function(a1, a2, a3) {
   }
 };
 
-var fiveArgumentPooler = function(a1, a2, a3, a4, a5) {
+var fourArgumentPooler = function(a1, a2, a3, a4) {
   var Klass = this;
   if (Klass.instancePool.length) {
     var instance = Klass.instancePool.pop();
-    Klass.call(instance, a1, a2, a3, a4, a5);
+    Klass.call(instance, a1, a2, a3, a4);
     return instance;
   } else {
-    return new Klass(a1, a2, a3, a4, a5);
+    return new Klass(a1, a2, a3, a4);
   }
 };
 
@@ -68,11 +69,9 @@ var standardReleaser = function(instance) {
   var Klass = this;
   invariant(
     instance instanceof Klass,
-    'Trying to release an instance into a pool of a different type.'
+    'Trying to release an instance into a pool of a different type.',
   );
-  if (instance.destructor) {
-    instance.destructor();
-  }
+  instance.destructor();
   if (Klass.instancePool.length < Klass.poolSize) {
     Klass.instancePool.push(instance);
   }
@@ -81,17 +80,29 @@ var standardReleaser = function(instance) {
 var DEFAULT_POOL_SIZE = 10;
 var DEFAULT_POOLER = oneArgumentPooler;
 
+type Pooler = any;
+
 /**
  * Augments `CopyConstructor` to be a poolable class, augmenting only the class
  * itself (statically) not adding any prototypical fields. Any CopyConstructor
  * you give this may have a `poolSize` property, and will look for a
- * prototypical `destructor` on instances (optional).
+ * prototypical `destructor` on instances.
  *
  * @param {Function} CopyConstructor Constructor that can be used to reset.
  * @param {Function} pooler Customizable pooler.
  */
-var addPoolingTo = function(CopyConstructor, pooler) {
-  var NewKlass = CopyConstructor;
+var addPoolingTo = function<T>(
+  CopyConstructor: Class<T>,
+  pooler: Pooler,
+): Class<T> & {
+  getPooled(
+    ...args: $ReadOnlyArray<mixed>
+  ): /* arguments of the constructor */ T,
+  release(instance: mixed): void,
+} {
+  // Casting as any so that flow ignores the actual implementation and trusts
+  // it to match the type we declared
+  var NewKlass = (CopyConstructor: any);
   NewKlass.instancePool = [];
   NewKlass.getPooled = pooler || DEFAULT_POOLER;
   if (!NewKlass.poolSize) {
@@ -103,10 +114,10 @@ var addPoolingTo = function(CopyConstructor, pooler) {
 
 var PooledClass = {
   addPoolingTo: addPoolingTo,
-  oneArgumentPooler: oneArgumentPooler,
-  twoArgumentPooler: twoArgumentPooler,
-  threeArgumentPooler: threeArgumentPooler,
-  fiveArgumentPooler: fiveArgumentPooler,
+  oneArgumentPooler: (oneArgumentPooler: Pooler),
+  twoArgumentPooler: (twoArgumentPooler: Pooler),
+  threeArgumentPooler: (threeArgumentPooler: Pooler),
+  fourArgumentPooler: (fourArgumentPooler: Pooler),
 };
 
 module.exports = PooledClass;

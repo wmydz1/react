@@ -9,7 +9,7 @@ There have been many posts recently covering the <i>why</i> and <i>how</i> of Re
 ## React in a nutshell
 Got five minutes to pitch React to your coworkers? John Lynch ([@johnrlynch](https://twitter.com/johnrlynch)) put together [this excellent and refreshing slideshow](http://slid.es/johnlynch/reactjs):
 
-<iframe src="//slid.es/johnlynch/reactjs/embed" width="576" height="420" scrolling="no" frameborder="0" webkitallowfullscreen mozallowfullscreen allowfullscreen></iframe>
+<iframe src="//slid.es/johnlynch/reactjs/embed" width="100%" height="420" scrolling="no" frameborder="0" webkitallowfullscreen mozallowfullscreen allowfullscreen></iframe>
 
 
 
@@ -54,13 +54,13 @@ It's great to see the React community expand internationally. [This site](http:/
 
 ### Egghead.io video tutorials
 
-Joe Maddalone ([@joemaddalone](https://twitter.com/joemaddalone)) of [egghead.io](https://egghead.io/) created a series of React video tutorials, such as [this](http://www.youtube-nocookie.com/watch?v=rFvZydtmsxM&feature=youtu.be&a) introduction to React Components. [[part 1](http://www.youtube-nocookie.com/watch?v=rFvZydtmsxM&feature=youtu.be&a)], [[part 2](http://www.youtube-nocookie.com/watch?v=5yvFLrt7N8M)]
+Joe Maddalone ([@joemaddalone](https://twitter.com/joemaddalone)) of [egghead.io](https://egghead.io/) created a series of React video tutorials, such as [this](http://www.youtube-nocookie.com/v/rFvZydtmsxM) introduction to React Components. [[part 1](http://www.youtube-nocookie.com/v/rFvZydtmsxM)], [[part 2](http://www.youtube-nocookie.com/v/5yvFLrt7N8M)]
 
 ### "React: Finally, a great server/client web stack"
 
 Eric Florenzano ([@ericflo](https://twitter.com/ericflo)) sheds some light on what makes React perfect for server rendering:
 
-> [...] the ideal solution would fully render the markup on the server, deliver it to the client so that it can be shown to the user instantly. Then it would asynchronously load some Javascript that would attach to the rendered markup, and invisibly promote the page into a full app that can render its own markup. [...]
+> [...] the ideal solution would fully render the markup on the server, deliver it to the client so that it can be shown to the user instantly. Then it would asynchronously load some JavaScript that would attach to the rendered markup, and invisibly promote the page into a full app that can render its own markup. [...]
 
 > What I've discovered is that enough of the pieces have come together, that this futuristic-sounding web environment is actually surprisingly easy to do now with React.js.
 
